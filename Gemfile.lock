@@ -1,4 +1,5 @@
 GEM
+  remote: http://rubygems.org/
   specs:
     httparty (0.8.1)
       multi_json
