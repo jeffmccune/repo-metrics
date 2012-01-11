@@ -166,6 +166,23 @@ projects:
   - v0.0.2
   - v0.0.3
   - v0.0.4
+- name: cloud-provisioner
+  remotes:
+    origin: git://github.com/puppetlabs/puppetlabs-cloud-provisioner.git
+  branches:
+  - master
+  tags:
+  - v0.0.1
+  - v1.0.0
+  - v1.0.1
+- name: cloud-provisioner-vmware
+  remotes:
+    origin: git@github.com:puppetlabs/puppetlabs-cloud-provisioner-vmware.git
+  branches:
+  - master
+  tags:
+  - v0.0.1
+  - v1.0.0
 - name: live-management
   remotes:
     origin: git@github.com:puppetlabs/live-management.git
