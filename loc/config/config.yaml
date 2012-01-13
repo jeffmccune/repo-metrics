@@ -183,6 +183,42 @@ projects:
   - v0.0.2
   - v0.0.3
   - v0.0.4
+- name: puppet-dashboard
+  remotes:
+    origin: git://github.com/puppetlabs/puppet-dashboard.git
+  branches:
+  - master
+  tags:
+  - v0.0.1
+  - v0.0.2
+  - v0.1.0
+  - v0.1.1
+  - v0.2.0
+  - v0.2.1
+  - v1.0.0
+  - v1.0.1
+  - v1.0.2
+  - v1.0.3
+  - v1.0.4
+  - v1.1.0
+  - v1.1.1
+  - v1.1.9
+  - 1.2.0
+  - 1.2.1
+  - 1.2.2
+  - 1.2.3
+  - 1.2.4
+- name: dashboard-module-baseline
+  remotes:
+    origin: git@github.com:puppetlabs/dashboard-module-baseline.git
+  branches:
+  - master
+  tags:
+  - 0.0.0
+  - 0.1.0
+  - 1.2
+  - 1.2.0
+  - 2.0.1
 - name: cloud-provisioner
   remotes:
     origin: git://github.com/puppetlabs/puppetlabs-cloud-provisioner.git
