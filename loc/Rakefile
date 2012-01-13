@@ -1,0 +1,105 @@
+require 'rake'
+require 'rake/clean'
+require 'yaml'
+
+BASEDIR=File.dirname(__FILE__)
+$LOAD_PATH.unshift(File.join(BASEDIR, 'lib'))
+
+require 'puppet_labs/metrics/loc'
+
+task :default => [:help]
+
+desc 'List Tasks'
+task :help do |t|
+  sh "rake -T"
+end
+
+# Clean List
+CLOBBER.include('stages/*.output')
+CLEAN.include('reports/*.yaml')
+
+# Method to get LOC for a range
+def loc_authored(ref1, ref2)
+  # No Merge Commits
+  cmd = "git -c mailmap.file=#{BASEDIR}/mailmap log --numstat --no-merges --pretty=format:#%H%n%aN,%cN,%aE,%cE"
+  "#{cmd} #{ref1}..#{ref2} --"
+end
+
+def loc_reviewed(ref1, ref2)
+  # Only Merge Commits
+  cmd = "git log --merges --pretty=format:%ae"
+end
+
+# Load the configuration file
+config = YAML.load_file("config/config.yaml")
+
+desc "Clone all projects"
+task :clone
+
+desc "Sync all project tags"
+task :synctags
+
+directory "projects"
+
+# Setup all of the git repositories
+config["projects"].each do |proj|
+  task :clone => "projects/#{proj['name']}"
+  file "projects/#{proj['name']}" => "projects" do
+    Dir.chdir "projects" do
+      sh "git clone --mirror --branch #{proj['branches'].first} -- #{proj['remotes']['origin']} #{proj['name']}"
+    end
+  end
+
+  task :synctags => "sync::#{proj['name']}"
+  task "sync::#{proj['name']}" => [ "projects/#{proj['name']}" ] do
+    Dir.chdir "projects/#{proj['name']}" do
+      sh "git fetch --tags --all"
+    end
+  end
+
+  proj['tags'] ||= Array.new
+
+  # This generates the git log summary outputs
+  proj['tags'].each_cons(2) do |tag_a, tag_b|
+    loc_auth_file = "loc_authored.#{proj['name']}.tag.#{tag_b}"
+
+    file "stages/#{loc_auth_file}.output" => [ "stages", "projects/#{proj['name']}" ] do |t|
+      Dir.chdir "projects/#{proj['name']}" do
+        cmd = loc_authored(tag_a, tag_b) << " > ../../#{t.name}"
+        sh cmd
+      end
+    end
+
+    # The YAML is nice to have for programmatic access
+    task :run => "reports/#{loc_auth_file}.yaml"
+    file "reports/#{loc_auth_file}.yaml" => [ "reports", "stages/#{loc_auth_file}.output" ] do |t|
+      release = PuppetLabs::Metrics::LOC::Release.new("stages/#{loc_auth_file}.output")
+      release.extra_hash['description'] = "#{proj['name']} from #{tag_a} to #{tag_b}"
+      File.open("reports/#{loc_auth_file}.yaml", "w") do |f|
+        f.write release.report.to_yaml
+      end
+    end
+    # The actual CSV We're interested in.
+    task :run => "reports/#{loc_auth_file}.csv"
+    file "reports/#{loc_auth_file}.csv" => [ "reports", "stages/#{loc_auth_file}.output" ] do |t|
+      release = PuppetLabs::Metrics::LOC::Release.new("stages/#{loc_auth_file}.output")
+      release.extra_hash['description'] = "#{proj['name']} from #{tag_a} to #{tag_b}"
+      File.open("reports/#{loc_auth_file}.csv", "w") do |f|
+        f.puts(%w{ Author Project Release LOC+ LOC- }.join(','))
+        f.puts("Total,#{proj['name']},#{tag_b},#{release.lines_added},#{release.lines_removed}")
+        authors = (release.lines_added_by_author.keys + release.lines_removed_by_author.keys).uniq.sort
+        authors.each do |author|
+          f.puts("#{author},#{proj['name']},#{tag_b},#{release.lines_added_by_author[author]},#{release.lines_removed_by_author[author]}")
+        end
+      end
+    end
+  end
+end
+
+desc "Run report for last version tags"
+task :run
+
+# Output
+directory "stages"
+directory "reports"
+
